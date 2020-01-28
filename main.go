@@ -125,6 +125,11 @@ func persistTotal(f *excelize.File) {
 	}
 
 	//Logic of adding next entry here:
+	//Get last element in array
+	//check netWorth in the array
+	//if it is different than current value we create the new struct and append it
+	//otherwise return here and don't append
+	//maybe want to consider a way to ensure that we are looking at the most recent entry
 
 	newEntry := netWorthEntry{
 		Date:             "01/04/2020",
