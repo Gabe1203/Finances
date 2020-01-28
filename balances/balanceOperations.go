@@ -10,11 +10,14 @@ import (
 
 var balanceMap = map[string]float64{"Checking": 0, "Savings - Meryll": 0, "Savings - New": 0, "Stocks - Plan": 0, "Stocks - Indv": 0, "Total": 0}
 
+var accountsKey = map[string]string{"chck": "Checking", "svngM": "Savings - Meryll", "svngNew": "Savings - New", "stcksP": "Stocks - Plan", "stcksI": "Stocks - Indv"}
+
 type File *excelize.File
+
+//const balanceSheet = excelize.OpenFile("balances/balances.xlsx")
 
 //Reports out balances
 func ReportBalances(detailedReport bool, f *excelize.File) (string, error) {
-	//go through the balances and initialize their values
 	initializeBalances(f)
 	var sb strings.Builder
 
@@ -33,25 +36,45 @@ func ReportBalances(detailedReport bool, f *excelize.File) (string, error) {
 	return sb.String(), nil
 }
 
-//updates all of the balances and reinitializes map after
+//updates all of the balances selected by the user and reinitializes map after
 func UpdateBalances(f *excelize.File) error {
-	err := updateCheckingsBalance(f)
-	if err != nil {
-		return err
+	fmt.Print("\n\nPlease enter which accounts you would like to update separated by commas... here is the legend for account codes: \n")
+
+	for key, value := range accountsKey {
+		fmt.Println(value + ": " + key)
+	}
+
+	var accounts string
+	fmt.Scanf("%s", &accounts)
+
+	accountsList := strings.Split(accounts, ",")
+	for _, accountKey := range accountsList {
+		account := accountsKey[accountKey]
+		if account != "" {
+			err := updateBalance(f, account)
+			if err != nil {
+				return err
+			}
+		} else {
+			fmt.Println("Invalid account key: " + accountKey)
+		}
+
 	}
 	initializeBalances(f)
 	return nil
 }
 
+//TODO: upgrade balance updates to webscraping or something similar
 //Connect to Bank of America API to update the value
 //onlineId1
 //passcode1
 //Idea: use selenium to log into the website
 //sign in link: https://staticweb.bankofamerica.com/cavmwebbactouch/common/index.html#home?app=signonv2
 //btCustomOnlineId
-//TODO: change this from manual update to update with web scraping
-func updateCheckingsBalance(f *excelize.File) error {
-	cell, err := f.SearchSheet("Sheet1", "Checking", true)
+
+//Updates the balance of the provided account
+func updateBalance(f *excelize.File, account string) error {
+	cell, err := f.SearchSheet("Sheet1", account, true)
 	if err != nil {
 		return err
 	}
@@ -59,9 +82,7 @@ func updateCheckingsBalance(f *excelize.File) error {
 	if err != nil {
 		return err
 	}
-	fmt.Println("Please input the new balance: ")
-	// reader := bufio.NewReader(os.Stdin)
-	// newValue, err := reader.ReadString('\n')
+	fmt.Println("Please input the new balance for " + account + " account: ")
 	var newBalance float64
 	_, err = fmt.Scanf("%f", &newBalance)
 	if err != nil {

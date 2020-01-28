@@ -12,19 +12,24 @@ import (
 const balanceSheet = "balances/balances.xlsx"
 
 func main() {
+	//----------------OUTPUT-------------------------
 	fmt.Println("            Starting application... ")
-	fmt.Println("|--------------------------------------------|\n\n\n\n\n")
-	f, err := excelize.OpenFile(balanceSheet)
+	fmt.Print("|--------------------------------------------|\n\n\n\n\n\n\n\n\n")
 	fmt.Println("Do you want to see your current balances? (y/n)")
+	//-----------------------------------------------
 
 	//Wait for valid input
+	f, err := excelize.OpenFile(balanceSheet)
 	checkBalance, err := readInput()
 	if err != nil {
 		fmt.Printf("Error reading input: %s", err.Error())
 	}
 
 	if checkBalance {
+		//----------------OUTPUT-------------------------
 		fmt.Println("Do you want to see a detailed view? (y/n)")
+		//-----------------------------------------------
+
 		detailedView, err := readInput()
 		if err != nil {
 			fmt.Printf("Error reading input: %s", err.Error())
@@ -33,9 +38,13 @@ func main() {
 		if err != nil {
 			fmt.Printf("Error reading input: %s", err.Error())
 		}
+
+		//----------------OUTPUT-------------------------
 		fmt.Println("Here are your balances: ")
 		fmt.Println(balances)
 		fmt.Println("Do you want to update checking balance before you quit? (y/n)")
+		//-----------------------------------------------
+
 		updateBalance, err := readInput()
 		if err != nil {
 			fmt.Printf("Error reading input: %s", err.Error())
@@ -48,15 +57,13 @@ func main() {
 			}
 			fmt.Println("Balance updated correctly.")
 		}
+
 		fmt.Println("Application terminating... come back for more features.")
 		return
 	} else {
 		fmt.Println("Application terminating... come back for more features.")
 		return
 	}
-
-	//fmt.Println(char)
-	return
 }
 
 func readInput() (bool, error) {
