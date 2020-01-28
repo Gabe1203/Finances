@@ -2,7 +2,10 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"os"
 
 	"github.com/360EntSecGroup-Skylar/excelize"
@@ -57,12 +60,10 @@ func main() {
 			}
 			fmt.Println("Balance updated correctly.")
 		}
-
-		fmt.Println("Application terminating... come back for more features.")
+		exitMessage(f)
 		return
 	} else {
-		fmt.Println("Application terminating... come back for more features.")
-		return
+		exitMessage(f)
 	}
 }
 
@@ -87,5 +88,61 @@ func readInput() (bool, error) {
 		return true, nil
 	} else {
 		return false, nil
+	}
+}
+
+//Message returned when app exits
+//TODO: persist net worth to be a greeting
+func exitMessage(f *excelize.File) {
+	fmt.Println("Thanks for checking up on your finances!")
+	netWorth := GetTotal(f)
+	fmt.Println("Your net worth is: " + netWorth)
+	persistTotal(f)
+	fmt.Println("Application terminating... come back for more features.")
+}
+
+type netWorthEntry struct {
+	Date             string  `json:"date"`
+	NetWorth         float64 `json:"netWorth"`
+	PreviousNetWorth float64 `json:"newWorth"`
+}
+
+//Writes total net worth to a json file if it has a different value
+//TODO: add logic to check if we should add a new entry
+//TODO: eventually want to store this by date for easy sorting
+//TODO: add error signature
+func persistTotal(f *excelize.File) {
+	//Read current values from file
+	jsonFile, err := os.Open("output.json")
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+	byteValue, _ := ioutil.ReadAll(jsonFile)
+	var netWorthEntries []netWorthEntry
+	err = json.Unmarshal(byteValue, &netWorthEntries)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	//Logic of adding next entry here:
+
+	newEntry := netWorthEntry{
+		Date:             "01/04/2020",
+		NetWorth:         0.0,
+		PreviousNetWorth: 0.0,
+	}
+
+	//Append the latest entry
+	netWorthEntries = append(netWorthEntries, newEntry)
+
+	jsonData, err := json.Marshal(netWorthEntries)
+	if err != nil {
+		log.Fatal(err.Error())
+	}
+
+	//Write new list to the file
+	err = ioutil.WriteFile("output.json", jsonData, 0644)
+	if err != nil {
+		log.Fatal(err.Error())
 	}
 }
