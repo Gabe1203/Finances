@@ -3,13 +3,18 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"github.com/Gabe1203/Finances/balances"
 	"os"
+
+	"github.com/360EntSecGroup-Skylar/excelize"
+	. "github.com/Gabe1203/Finances/balances"
 )
+
+const balanceSheet = "balances/balances.xlsx"
 
 func main() {
 	fmt.Println("            Starting application... ")
 	fmt.Println("|--------------------------------------------|\n\n\n\n\n")
+	f, err := excelize.OpenFile(balanceSheet)
 	fmt.Println("Do you want to see your current balances? (y/n)")
 
 	//Wait for valid input
@@ -24,12 +29,26 @@ func main() {
 		if err != nil {
 			fmt.Printf("Error reading input: %s", err.Error())
 		}
-		balances, err := balances.ReportBalances(detailedView)
+		balances, err := ReportBalances(detailedView, f)
 		if err != nil {
 			fmt.Printf("Error reading input: %s", err.Error())
 		}
 		fmt.Println("Here are your balances: ")
 		fmt.Println(balances)
+		fmt.Println("Do you want to update checking balance before you quit? (y/n)")
+		updateBalance, err := readInput()
+		if err != nil {
+			fmt.Printf("Error reading input: %s", err.Error())
+		}
+		if updateBalance {
+			err := UpdateBalances(f)
+			if err != nil {
+				fmt.Printf("Error updating balances... %s", err.Error())
+				return
+			}
+			fmt.Println("Balance updated correctly.")
+		}
+		fmt.Println("Application terminating... come back for more features.")
 		return
 	} else {
 		fmt.Println("Application terminating... come back for more features.")
