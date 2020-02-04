@@ -14,6 +14,8 @@ import (
 
 const balanceSheet = "sheets/balances.xlsx"
 
+const lowBalanceThreshold = 500.00
+
 var startBalance float64
 
 func main() {
@@ -138,7 +140,12 @@ func exitMessage(f *excelize.File) error {
 	} else {
 		fmt.Printf("Your net worth did not change: %.2f\n", netWorth)
 	}
-	fmt.Println("Application terminating... come back for more features.")
+	balances := GetBalanceMap(f)
+	cash := balances["Checking"] + balances["Uber Available Credit"] + balances["C1 Available Credit"]
+	if cash < lowBalanceThreshold {
+		fmt.Println("WARNING!\nYour spending power is too low. Please be more careful.")
+	}
+	fmt.Printf("Your current spending power is: %f\n... application terminating.", cash)
 	return nil
 }
 

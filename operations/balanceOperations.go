@@ -9,9 +9,11 @@ import (
 	"github.com/360EntSecGroup-Skylar/excelize"
 )
 
-var balanceMap = map[string]float64{"Checking": 0, "Savings - Meryll": 0, "Savings - New": 0, "Stocks - Plan": 0, "Stocks - Indv": 0}
+var balanceMap = map[string]float64{"Checking": 0, "Savings - Meryll": 0, "Savings - New": 0, "Stocks - Plan": 0, "Stocks - Indv": 0, "Uber Available Credit": 0, "C1 Available Credit": 0, "Liquidity": 0}
 
 var accountsKey = map[string]string{"chck": "Checking", "svngM": "Savings - Meryll", "svngNew": "Savings - New", "stcksP": "Stocks - Plan", "stcksI": "Stocks - Indv"}
+
+const lowBalanceThreshold = 500.00
 
 type File *excelize.File
 
@@ -46,6 +48,11 @@ func GetTotal(f *excelize.File) (float64, error) {
 	ret := fmt.Sprintf("%.2f", total)
 
 	return strconv.ParseFloat(ret, 64)
+}
+
+func GetBalanceMap(f *excelize.File) map[string]float64 {
+	initializeBalances(f)
+	return balanceMap
 }
 
 //updates all of the balances selected by the user and reinitializes map after
