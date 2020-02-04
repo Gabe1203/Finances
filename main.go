@@ -5,14 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
+	"time"
 
 	"github.com/360EntSecGroup-Skylar/excelize"
-	. "github.com/Gabe1203/Finances/balances"
+	. "github.com/Gabe1203/Finances/operations"
 )
 
-const balanceSheet = "balances/balances.xlsx"
+const balanceSheet = "sheets/balances.xlsx"
+
+var startBalance float64
 
 func main() {
 	//----------------OUTPUT-------------------------
@@ -23,6 +25,11 @@ func main() {
 
 	//Wait for valid input
 	f, err := excelize.OpenFile(balanceSheet)
+	startBalance, err = GetTotal(f)
+	if err != nil {
+		fmt.Printf("Error getting starting balance: %s", err.Error())
+	}
+	//fmt.Println(startBalance)
 	checkBalance, err := readInput()
 	if err != nil {
 		fmt.Printf("Error reading input: %s", err.Error())
@@ -45,21 +52,31 @@ func main() {
 		//----------------OUTPUT-------------------------
 		fmt.Println("Here are your balances: ")
 		fmt.Println(balances)
-		fmt.Println("Do you want to update checking balance before you quit? (y/n)")
+		fmt.Println("Do you want to update balances before you quit? (y/n)")
 		//-----------------------------------------------
 
 		updateBalance, err := readInput()
 		if err != nil {
 			fmt.Printf("Error reading input: %s", err.Error())
 		}
+		attempts := 0
 		if updateBalance {
-			err := UpdateBalances(f)
-			if err != nil {
-				fmt.Printf("Error updating balances... %s", err.Error())
-				return
+			for {
+				attempts++
+				err := UpdateBalances(f)
+				if err == nil {
+					fmt.Println("Balance updated correctly.")
+					break
+				} else {
+					fmt.Printf("Error updating balances... %s. Please try again.\n", err.Error())
+				}
+				if attempts > 4 {
+					fmt.Printf("Sorry, that was too many failed attempts(%d) to update balances. Try again next time.\n", attempts)
+					break
+				}
 			}
-			fmt.Println("Balance updated correctly.")
 		}
+
 		exitMessage(f)
 		return
 	} else {
@@ -70,6 +87,7 @@ func main() {
 func readInput() (bool, error) {
 	var char rune
 	var err error
+
 	//Spin until the user inputs a valid input
 	for {
 		reader := bufio.NewReader(os.Stdin)
@@ -93,61 +111,74 @@ func readInput() (bool, error) {
 
 //Message returned when app exits
 //TODO: persist net worth to be a greeting
-func exitMessage(f *excelize.File) {
+func exitMessage(f *excelize.File) error {
 	fmt.Println("Thanks for checking up on your finances!")
-	netWorth := GetTotal(f)
-	fmt.Println("Your net worth is: " + netWorth)
-	persistTotal(f)
+	netWorth, err := GetTotal(f)
+	if err != nil {
+		fmt.Printf("Error getting total... %s", err.Error())
+		return err
+	}
+	delta := netWorth - startBalance
+	if delta > 0 {
+		fmt.Printf("Congrats! Your worth went up.\n")
+		fmt.Printf("Your worth increased by %f from %f to %.2f\n", delta, startBalance, netWorth)
+		err := persistTotal(f, netWorth)
+		if err != nil {
+			fmt.Printf("Error persisting total... %s", err.Error())
+			return err
+		}
+	} else if delta < 0 {
+		fmt.Printf("Oof... looks like your worth went down. Try saving more money\n")
+		fmt.Printf("Your worth decreased by %f from %f to %.2f\n", delta, startBalance, netWorth)
+		err := persistTotal(f, netWorth)
+		if err != nil {
+			fmt.Printf("Error persisting total... %s", err.Error())
+			return err
+		}
+	} else {
+		fmt.Printf("Your net worth did not change: %.2f\n", netWorth)
+	}
 	fmt.Println("Application terminating... come back for more features.")
+	return nil
 }
 
 type netWorthEntry struct {
 	Date             string  `json:"date"`
 	NetWorth         float64 `json:"netWorth"`
-	PreviousNetWorth float64 `json:"newWorth"`
+	PreviousNetWorth float64 `json:"previousNetWorth"`
 }
 
-//Writes total net worth to a json file if it has a different value
-//TODO: add logic to check if we should add a new entry
-//TODO: eventually want to store this by date for easy sorting
-//TODO: add error signature
-func persistTotal(f *excelize.File) {
-	//Read current values from file
+//Writes total net worth to a json file if it has a different value -> only records changes ie changeLog of total
+func persistTotal(f *excelize.File, currentWorth float64) error {
 	jsonFile, err := os.Open("output.json")
 	if err != nil {
-		log.Fatal(err.Error())
+		return err
 	}
+
 	byteValue, _ := ioutil.ReadAll(jsonFile)
 	var netWorthEntries []netWorthEntry
 	err = json.Unmarshal(byteValue, &netWorthEntries)
 	if err != nil {
-		log.Fatal(err.Error())
+		return err
 	}
 
-	//Logic of adding next entry here:
-	//Get last element in array
-	//check netWorth in the array
-	//if it is different than current value we create the new struct and append it
-	//otherwise return here and don't append
-	//maybe want to consider a way to ensure that we are looking at the most recent entry
-
+	previousEntry := netWorthEntries[len(netWorthEntries)-1]
 	newEntry := netWorthEntry{
-		Date:             "01/04/2020",
-		NetWorth:         0.0,
-		PreviousNetWorth: 0.0,
+		Date:             time.Now().String(),
+		NetWorth:         currentWorth,
+		PreviousNetWorth: previousEntry.NetWorth,
 	}
 
-	//Append the latest entry
 	netWorthEntries = append(netWorthEntries, newEntry)
 
 	jsonData, err := json.Marshal(netWorthEntries)
 	if err != nil {
-		log.Fatal(err.Error())
+		return err
 	}
 
-	//Write new list to the file
 	err = ioutil.WriteFile("output.json", jsonData, 0644)
 	if err != nil {
-		log.Fatal(err.Error())
+		return err
 	}
+	return nil
 }
