@@ -90,7 +90,7 @@ func updateBalance(f *excelize.File, account string) error {
 	if err != nil {
 		return err
 	}
-	curPos, err := getAdjacentCellPos(cell[0])
+	curPos, err := GetAdjacentCellPos(cell[0], 1)
 	if err != nil {
 		return err
 	}
@@ -115,7 +115,7 @@ func initializeBalances(file *excelize.File) error {
 		if err != nil {
 			return err
 		}
-		valuePos, err := getAdjacentCellPos(keyPos[0])
+		valuePos, err := GetAdjacentCellPos(keyPos[0], 1)
 		if err != nil {
 			return err
 		}
@@ -132,8 +132,14 @@ func initializeBalances(file *excelize.File) error {
 	return nil
 }
 
-func getAdjacentCellPos(cell string) (string, error) {
+func GetAdjacentCellPos(cell string, shift int) (string, error) {
 	x, y, _ := excelize.CellNameToCoordinates(cell)
-	x++
+	x += shift
+	return excelize.CoordinatesToCellName(x, y)
+}
+
+func GetBelowCellPos(cell string) (string, error) {
+	x, y, _ := excelize.CellNameToCoordinates(cell)
+	y++
 	return excelize.CoordinatesToCellName(x, y)
 }
